@@ -3,13 +3,13 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPool;
-    
+use sqlx::{postgres::PgPool, FromRow};
+
 mod postgres;
 
-#[derive(Serialize)]
+#[derive(FromRow, Deserialize, Serialize)]
 struct Test {
-    id: u64,
+    id: i32,
     text: String,
 }
 
@@ -20,8 +20,9 @@ async fn main() {
     let pool = postgres::connect().await.unwrap();
 
     let app = Router::new()
-        .route("/", get(test_handler))
-        .layer(AddExtensionLayer::new(pool));;
+        .route("/one", get(test_handler_one))
+        .route("/two", get(test_handler_two))
+        .layer(AddExtensionLayer::new(pool));
 
     let host = dotenv::var("HOST").expect("Couldn't read HOST from .env file!");
 
@@ -33,29 +34,18 @@ async fn main() {
         .unwrap();
 }
 
-async fn test_handler(Extension(pool): Extension<PgPool>,) -> impl IntoResponse {
-    // insert your application logic here
-    let test = Test {
-        id: 2,
-        text: "abc".to_string(),
-    };
+async fn test_handler_one(Extension(pool): Extension<PgPool>) -> impl IntoResponse {
+    let sql = "SELECT * FROM wa7_test_sqlx where id=1".to_string();
 
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
+    let test: Test = sqlx::query_as(&sql).fetch_one(&pool).await.unwrap();
+
     (StatusCode::OK, Json(test))
 }
 
-// mod postgres;
+async fn test_handler_two(Extension(pool): Extension<PgPool>) -> impl IntoResponse {
+    let sql = "SELECT * FROM wa7_test_sqlx where id=2".to_string();
 
-// #[tokio::main]
-// async fn main() -> Result<(), sqlx::Error> {
-//     dotenv::dotenv().ok();
+    let test: Test = sqlx::query_as(&sql).fetch_one(&pool).await.unwrap();
 
-//     let pool = postgres::connect().await.unwrap();
-
-//     let sql = "INSERT INTO wa7_test_sqlx (text) VALUES ('test')".to_string();
-
-//     sqlx::query(&sql).execute(&pool).await?;
-
-//     Ok(())
-// }
+    (StatusCode::OK, Json(test))
+}
