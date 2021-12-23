@@ -8,3 +8,4 @@ tokio = { version = "1", features = [ "full" ] }
 axum = "0.4"
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "postgres" ] }
 dotenv = "0.15"
+anyhow = "1.0"
