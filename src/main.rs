@@ -13,6 +13,11 @@ struct Test {
     text: String,
 }
 
+pub struct InsertTest {
+    pub id: i32,
+    pub text: Option<String>,
+}
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
@@ -22,6 +27,8 @@ async fn main() {
     let app = Router::new()
         .route("/one", get(test_handler_one))
         .route("/two", get(test_handler_two))
+        .route("/three", get(test_handler_three))
+        .route("/four", get(test_handler_four))
         .layer(AddExtensionLayer::new(pool));
 
     let host = dotenv::var("HOST").expect("Couldn't read HOST from .env file!");
@@ -48,4 +55,32 @@ async fn test_handler_two(Extension(pool): Extension<PgPool>) -> impl IntoRespon
     let test: Test = sqlx::query_as(&sql).fetch_one(&pool).await.unwrap();
 
     (StatusCode::OK, Json(test))
+}
+
+async fn test_handler_three(Extension(pool): Extension<PgPool>) -> impl IntoResponse {
+    let insert = InsertTest { id: 5, text: None };
+
+    let sql = "INSERT INTO wa7_test (text) VALUES ($1::TEXT)";
+
+    let _ = sqlx::query(&sql)
+        .bind(&insert.text.unwrap_or("".to_string()))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    (StatusCode::OK, Json("test"))
+}
+
+async fn test_handler_four(Extension(pool): Extension<PgPool>) -> impl IntoResponse {
+    let insert = InsertTest { id: 5, text: None };
+
+    let sql = "INSERT INTO wa7_test_null (text) VALUES ($1::TEXT)";
+
+    let _ = sqlx::query(&sql)
+        .bind(&insert.text)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    (StatusCode::OK, Json("test"))
 }
