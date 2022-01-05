@@ -4,6 +4,8 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPool, FromRow};
+use std::sync::Arc;
+use std::ops::Deref;
 
 mod postgres;
 
@@ -18,18 +20,56 @@ pub struct InsertTest {
     pub text: Option<String>,
 }
 
+// #[derive(Clone)]
+// pub struct State {
+//     pub text: String,
+// }
+
+pub struct State(Arc<SharedState>);
+
+impl Clone for State {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+
+// impl<T: ?Sized> AsRef<T> for State<T> {
+//     fn as_ref(&self) -> &T {
+//         &**self
+//     }
+// }
+
+impl Deref for State {
+    type Target = SharedState;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct SharedState {
+    pub text: String,
+}
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
 
     let pool = postgres::connect().await.unwrap();
 
+    // let state = Arc::new(State {
+    //     text: "Hello".to_string(),
+    // });
+    let state = State(Arc::new(SharedState { text: "Hello".to_string() }));
+
     let app = Router::new()
         .route("/one", get(test_handler_one))
         .route("/two", get(test_handler_two))
         .route("/three", get(test_handler_three))
         .route("/four", get(test_handler_four))
-        .layer(AddExtensionLayer::new(pool));
+        .route("/five", get(test_handler_five))
+        .layer(AddExtensionLayer::new(pool))
+        .layer(AddExtensionLayer::new(state));
 
     let host = dotenv::var("HOST").expect("Couldn't read HOST from .env file!");
 
@@ -82,5 +122,20 @@ async fn test_handler_four(Extension(pool): Extension<PgPool>) -> impl IntoRespo
         .await
         .unwrap();
 
-    (StatusCode::OK, Json("test"))
+    (StatusCode::OK, Json("four"))
+}
+
+async fn test_handler_five(
+    Extension(state): Extension<State>,
+    Extension(pool): Extension<PgPool>,
+) -> impl IntoResponse {
+    let sql = "INSERT INTO wa7_test (text) VALUES ($1::TEXT)";
+
+    let _ = sqlx::query(&sql)
+        .bind(&state.text)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    (StatusCode::OK, Json("five"))
 }
