@@ -1,3 +1,4 @@
+/_tmp
 /target
 .env
 *.crt

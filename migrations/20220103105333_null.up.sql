@@ -1,4 +1,0 @@
-CREATE TABLE IF NOT EXISTS wa7_test_null(
-    id SERIAL PRIMARY KEY,
-    text VARCHAR(128)
-);
