@@ -57,6 +57,9 @@ async fn main() {
 
     let pool = postgres::connect().await.unwrap();
 
+    // Run mmigrations
+    sqlx::migrate!().run(&pool).await.unwrap();
+
     // let state = Arc::new(State {
     //     text: "Hello".to_string(),
     // });
