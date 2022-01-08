@@ -1,1 +1,2 @@
--- Add down migration script here
+DROP TABLE wa7_test;
+DROP TABLE wa7_test_null;
